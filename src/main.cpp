@@ -7,18 +7,18 @@
 #include <ArduinoJson.h>
 #include <sys/time.h> // Uhr über settimeofday()/gettimeofday() stellen/lesen
 #include <Preferences.h>
+#include <LittleFS.h>
 
 #include "config.h"
 #include "secrets.h"
 #include "melodies.h"
-#include "webpage.h"
 
 // =====================================================================
 // Globale Objekte
 // =====================================================================
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 WebServer server(80);
-Preferences prefs;
+Preferences prefs; // for smth
 
 // =====================================================================
 // State-Machine- und Habit-Daten
@@ -28,7 +28,7 @@ DeviceState currentState = STATE_INIT;
 Habit habits[MAX_HABITS];
 int habitCount = 0;
 int currentHabitIndex = 0;
-long lastKnownDay = 0;
+long lastKnownDay = 0; // TODO:
 
 int countdownHabitIndex = -1;
 int countdownMinutes = 0;
@@ -42,9 +42,7 @@ unsigned long lastBlinkTime = 0;
 int brightness = 0;
 int fadeAmount = 5;
 
-// =====================================================================
-// RGB-LED
-// =====================================================================
+// Funktion um Farbe der LED anzuzeigen
 void setColor(int r, int g, int b)
 {
   analogWrite(PIN_R, r);
@@ -56,6 +54,7 @@ void setColor(int r, int g, int b)
 // Zeit
 // =====================================================================
 // Tage seit 1970 anhand der internen Chip-Uhr (per Handy gesetzt, siehe handleSyncTime)
+
 long getCurrentDay()
 {
   struct timeval tv;
@@ -289,13 +288,50 @@ void drawScreen()
   display.display();
 }
 
+void setupWebServer()
+{
+  server.on("/", HTTP_GET, []()
+            {
+    File file = LittleFS.open("/index.html", "r");
+    if(!file){
+      server.send(500, "text/plain", "Fehler: index.html nicht gefunden");
+      return;
+    }
+    server.streamFile(file, "text/html");
+    file.close(); });
+
+  server.on("/style.css", HTTP_GET, []()
+            {
+    File file = LittleFS.open("/style.css", "r");
+    server.streamFile(file, "text/css");
+    file.close(); });
+
+  server.on("/script.js", HTTP_GET, []()
+            {
+File file = LittleFS.open("/script.js", "r");
+    server.streamFile(file, "application/javascript");
+    file.close(); });
+
+  server.on("/habits", HTTP_GET, []()
+            { server.send(200, "application/json", prefs.getString("data"
+                                                                   "[]")); });
+}
+
 // =====================================================================
 // Setup
 // =====================================================================
 void setup()
 {
   Serial.begin(115200);
-  prefs.begin("habitApp", false); // Flash-Speicher öffnen
+  Serial.println("\n Habit Reminder startet...");
+
+  if (!LittleFS.begin(true))
+  {
+    Serial.println("Fehler beim Mounten von LittleFS");
+    return;
+  }
+
+  Serial.println("LittleFS erfolgreich gestartet!");
 
   pinMode(PIN_ENC_CLK, INPUT_PULLUP);
   pinMode(PIN_ENC_DT, INPUT_PULLUP);
@@ -312,32 +348,23 @@ void setup()
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
   {
     Serial.println("OLED Fehler!");
-    // bewusst delay() statt leerem for(;;) - eine komplett leere
-    // Endlosschleife kann auf dem ESP32 den Watchdog-Timer auslösen
-    while (true)
-      delay(1000);
   }
 
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(10, 20);
-  display.println("Starte WLAN...");
+  display.println("Starte Reminder...");
   display.display();
 
+  prefs.begin("habitApp", false); // Flash-Speicher öffnen
   WiFi.softAP(ssid, password);
   Serial.print("Access Point gestartet. IP: ");
   Serial.println(WiFi.softAPIP()); // normalerweise 192.168.4.1
 
-  server.on("/", HTTP_GET, []()
-            { server.send(200, "text/html", INDEX_HTML); });
-  server.on("/style.css", HTTP_GET, []()
-            { server.send(200, "text/css", STYLE_CSS); });
-  server.on("/habits", HTTP_GET, handleGetHabits);
-  server.on("/habits", HTTP_POST, handlePostHabit);
-  server.on("/habits", HTTP_DELETE, handleDeleteHabit);
-  server.on("/sync-time", HTTP_POST, handleSyncTime);
+  setupWebServer();
   server.begin();
+  Serial.println("Webserver läuft");
 
   loadHabits();
   currentState = STATE_IDLE;

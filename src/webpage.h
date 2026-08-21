@@ -6,7 +6,7 @@
 // genau wie eine "echte" externe CSS-Datei - nur eben offline vom Gerät
 // selbst statt von einem CDN.
 
-const char* INDEX_HTML = R"rawliteral(
+const char *INDEX_HTML = R"rawliteral(
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -92,7 +92,7 @@ const char* INDEX_HTML = R"rawliteral(
                 body: JSON.stringify({ timestamp: currentUnixTime })
             }).then(() => {
                 document.getElementById('statusText').innerHTML =
-                    '<span class="status-dot-wrap"><span class="status-dot"></span></span> Time Synced!';
+                    '<span class="status-dot-wrap"><span class="status-dot"></span></span> Time synced!';
                 loadHabits();
             });
 
@@ -152,7 +152,7 @@ const char* INDEX_HTML = R"rawliteral(
 </html>
 )rawliteral";
 
-const char* STYLE_CSS = R"rawliteral(
+const char *STYLE_CSS = R"rawliteral(
 :root {
     --gray-50:  #f9fafb;
     --gray-100: #f3f4f6;

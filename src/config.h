@@ -31,18 +31,6 @@ enum DeviceState
   STATE_FEEDBACK
 };
 
-// --- Habit Datenstruktur ---
-// struct Habit {
-//   long id;
-//   String name;
-//   String time;          // z.B. "14:30"
-//   String melody;
-//   bool completedToday;
-//   int currentStreak;
-//   long lastCompletedDay;
-//   bool reminderTriggered;
-// };
-
 struct Habit
 {
   long id;

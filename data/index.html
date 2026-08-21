@@ -1,378 +1,97 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Smart Habit Companion</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" type="text/css" href="./style.css" />
-    <!-- Phosphor Icons for UI elements -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <title>Habit Companion</title>
+    <link rel="stylesheet" href="./style.css" />
   </head>
-  <body class="antialiased min-h-screen flex flex-col items-center pb-20">
-    <!-- Sticky Header -->
-    <header
-      class="w-full max-w-md mx-auto sticky top-0 z-50 glass-header px-6 py-4 flex items-center justify-between border-b border-gray-200"
-    >
+  <body>
+    <header>
       <div>
-        <h1 class="text-xl font-bold text-gray-900 tracking-tight">
-          Habit Companion
-        </h1>
-        <p
-          class="text-xs text-gray-500 font-medium mt-0.5 flex items-center gap-1"
-        >
-          <span class="relative flex h-2 w-2">
-            <span
-              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
-            ></span>
-            <span
-              class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"
-            ></span>
+        <h1>Habit Companion</h1>
+        <p class="status" id="statusText">
+          <span class="status-dot-wrap">
+            <span class="status-dot-ping"></span>
+            <span class="status-dot"></span>
           </span>
-          Device Connected
+          Connecting...
         </p>
       </div>
-      <div
-        class="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100"
-      >
-        <i class="ph ph-device-mobile text-xl text-gray-700"></i>
+      <div class="avatar">
+        <!-- device-mobile Icon -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect
+            x="7"
+            y="2"
+            width="10"
+            height="20"
+            rx="2"
+            stroke="currentColor"
+            stroke-width="1.8"
+          />
+          <circle cx="12" cy="18.3" r="0.9" fill="currentColor" />
+        </svg>
       </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="w-full max-w-md mx-auto px-6 pt-6 flex-1 flex flex-col gap-8">
-      <!-- Add New Habit Section -->
-      <section
-        class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100/50"
-      >
-        <h2 class="text-lg font-semibold mb-5 flex items-center gap-2">
-          <i class="ph-fill ph-plus-circle text-blue-500"></i>
+    <main>
+      <section class="card">
+        <h2>
+          <!-- plus-circle Icon -->
+          <svg
+            class="icon-blue"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle cx="12" cy="12" r="10" fill="currentColor" />
+            <path
+              d="M12 8v8M8 12h8"
+              stroke="#fff"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
           Set New Habit
         </h2>
-
-        <form id="habitForm" class="flex flex-col gap-4">
-          <!-- Habit Name Input -->
-          <div class="flex flex-col gap-1.5">
-            <label
-              for="habitName"
-              class="text-sm font-medium text-gray-600 ml-1"
-              >What do you want to track?</label
-            >
-            <div class="relative">
-              <div
-                class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"
-              >
-                <i class="ph ph-target text-gray-400 text-lg"></i>
-              </div>
-              <input
-                type="text"
-                id="habitName"
-                required
-                placeholder="e.g., Drink 2L Water"
-                class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 placeholder-gray-400"
-              />
+        <form id="habitForm">
+          <div class="field">
+            <label>What do you want to track?</label>
+            <input
+              type="text"
+              id="habitName"
+              required
+              placeholder="e.g., Drink Water"
+            />
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Time</label>
+              <input type="time" id="habitTime" required value="14:00" />
+            </div>
+            <div class="field">
+              <label>Melody</label>
+              <select id="habitMelody">
+                <option value="Reminder">Reminder</option>
+                <option value="Success">Success</option>
+              </select>
             </div>
           </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <!-- Time Picker -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="habitTime"
-                class="text-sm font-medium text-gray-600 ml-1"
-                >Reminder Time</label
-              >
-              <div class="relative">
-                <div
-                  class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"
-                >
-                  <i class="ph ph-clock text-gray-400 text-lg"></i>
-                </div>
-                <input
-                  type="time"
-                  id="habitTime"
-                  required
-                  value="08:00"
-                  class="w-full pl-10 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800"
-                />
-              </div>
-            </div>
-
-            <!-- Melody Dropdown -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="habitMelody"
-                class="text-sm font-medium text-gray-600 ml-1"
-                >Alert Melody</label
-              >
-              <div class="relative">
-                <div
-                  class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none"
-                >
-                  <i class="ph ph-music-note text-gray-400 text-lg"></i>
-                </div>
-                <select
-                  id="habitMelody"
-                  required
-                  class="w-full pl-10 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-800 appearance-none"
-                >
-                  <option value="Success">Success</option>
-                  <option value="Reminder" selected>Reminder</option>
-                  <option value="Error">Alert</option>
-                </select>
-                <div
-                  class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
-                >
-                  <i class="ph ph-caret-down text-gray-400"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Submit Button -->
-          <button
-            type="submit"
-            class="mt-2 w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3.5 rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-          >
-            <i class="ph-bold ph-paper-plane-tilt"></i>
-            Sync to Device
-          </button>
+          <button type="submit">Sync to Device</button>
         </form>
       </section>
 
-      <!-- Active Habits List -->
       <section>
-        <div class="flex items-center justify-between mb-4 px-1">
-          <h2 class="text-lg font-semibold text-gray-900">
-            Active Habits on Device
-          </h2>
-          <span
-            class="text-xs font-semibold bg-gray-200 text-gray-600 px-2 py-1 rounded-full"
-            id="habitCount"
-            >0/4</span
-          >
+        <div class="list-header">
+          <h2>Active Habits</h2>
+          <span class="badge" id="habitCount">0/6</span>
         </div>
-
-        <div id="habitList" class="flex flex-col gap-3">
-          <!-- Habits will be injected here via JavaScript from JSON -->
-        </div>
-
-        <!-- Empty State (Hidden by default) -->
-        <div
-          id="emptyState"
-          class="hidden flex-col items-center justify-center py-10 text-center"
-        >
-          <div
-            class="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-3"
-          >
-            <i class="ph ph-ghost text-2xl text-gray-400"></i>
-          </div>
-          <p class="text-gray-500 font-medium">No habits configured yet.</p>
-          <p class="text-sm text-gray-400">
-            Add one above to sync to your device.
-          </p>
-        </div>
+        <div id="habitList"></div>
       </section>
     </main>
 
-    <!-- Toast Notification Container -->
-    <div
-      id="toastContainer"
-      class="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none px-4 z-50"
-    ></div>
-
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const form = document.getElementById("habitForm");
-        const habitList = document.getElementById("habitList");
-        const emptyState = document.getElementById("emptyState");
-        const toastContainer = document.getElementById("toastContainer");
-        const MAX_HABITS = 4; // Matching the C++ limitation
-
-        // JSON Data Source (Simulates data from ESP32)
-        let habitsData = [
-          { id: 1715000001, name: "Sport", time: "17:30", melody: "Reminder" },
-          {
-            id: 1715000002,
-            name: "Wasser trinken",
-            time: "09:00",
-            melody: "Success",
-          },
-          { id: 1715000003, name: "Lernen", time: "14:00", melody: "Reminder" },
-        ];
-
-        // Icons based on common habit keywords (simple mapping)
-        function getIconForHabit(name) {
-          const lowerName = name.toLowerCase();
-          if (
-            lowerName.includes("sport") ||
-            lowerName.includes("workout") ||
-            lowerName.includes("gym") ||
-            lowerName.includes("run")
-          )
-            return "ph-barbell";
-          if (
-            lowerName.includes("water") ||
-            lowerName.includes("wasser") ||
-            lowerName.includes("drink")
-          )
-            return "ph-drop";
-          if (
-            lowerName.includes("learn") ||
-            lowerName.includes("lernen") ||
-            lowerName.includes("read") ||
-            lowerName.includes("book")
-          )
-            return "ph-book-open-text";
-          if (
-            lowerName.includes("guitar") ||
-            lowerName.includes("music") ||
-            lowerName.includes("gitarre")
-          )
-            return "ph-guitar";
-          if (lowerName.includes("meditat")) return "ph-flower-lotus";
-          return "ph-star"; // default
-        }
-
-        // Colors based on melody type
-        function getColorForMelody(melody) {
-          switch (melody) {
-            case "Success":
-              return "bg-emerald-50 text-emerald-500";
-            case "Reminder":
-              return "bg-blue-50 text-blue-500";
-            case "Error":
-              return "bg-amber-50 text-amber-500";
-            default:
-              return "bg-gray-50 text-gray-500";
-          }
-        }
-
-        function showToast(message, isError = false) {
-          const toast = document.createElement("div");
-          toast.className = `transform translate-y-10 opacity-0 transition-all duration-300 ease-out px-4 py-3 rounded-2xl shadow-lg flex items-center gap-3 font-medium text-sm ${isError ? "bg-red-50 text-red-600 border border-red-100" : "bg-gray-900 text-white"}`;
-
-          toast.innerHTML = `
-                    <i class="ph-fill ${isError ? "ph-warning-circle" : "ph-check-circle"} text-lg"></i>
-                    ${message}
-                `;
-
-          toastContainer.appendChild(toast);
-
-          setTimeout(() => {
-            toast.classList.remove("translate-y-10", "opacity-0");
-          }, 10);
-
-          setTimeout(() => {
-            toast.classList.add("translate-y-10", "opacity-0");
-            setTimeout(() => toast.remove(), 300);
-          }, 3000);
-        }
-
-        function renderHabits(animateLast = false) {
-          habitList.innerHTML = ""; // Clear current list
-
-          // Update UI count and empty state
-          document.getElementById("habitCount").innerText =
-            `${habitsData.length}/${MAX_HABITS}`;
-
-          if (habitsData.length === 0) {
-            emptyState.classList.remove("hidden");
-            emptyState.classList.add("flex");
-          } else {
-            emptyState.classList.add("hidden");
-            emptyState.classList.remove("flex");
-          }
-
-          // Generate HTML for each habit in the JSON array
-          habitsData.forEach((habit, index) => {
-            const colorClass = getColorForMelody(habit.melody);
-            const isNewest = animateLast && index === habitsData.length - 1;
-
-            const item = document.createElement("div");
-            item.className = `group bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-all ${isNewest ? "transform scale-95 opacity-0" : ""}`;
-
-            item.innerHTML = `
-                        <div class="flex items-center gap-4">
-                            <div>
-                                <h3 class="font-semibold text-gray-800">${habit.name}</h3>
-                                <p class="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                                    <i class="ph ph-clock"></i> ${habit.time} &bull; ${habit.melody}
-                                </p>
-                            </div>
-                        </div>
-                        <button class="text-gray-300 hover:text-red-500 transition-colors p-2" onclick="deleteHabit(${habit.id})">
-                            <i class="ph-fill ph-trash"></i>
-                        </button>
-                    `;
-
-            habitList.appendChild(item);
-
-            // Animate entry if it's newly added
-            if (isNewest) {
-              setTimeout(() => {
-                item.classList.remove("scale-95", "opacity-0");
-              }, 10);
-            }
-          });
-        }
-
-        window.deleteHabit = function (id) {
-          // Remove from JSON array
-          habitsData = habitsData.filter((habit) => habit.id !== id);
-          // Re-render list
-          renderHabits();
-
-          // Note: In real setup, send DELETE request to ESP32 here
-          // fetch(`/api/habits?id=${id}`, { method: 'DELETE' });
-
-          showToast("Habit deleted");
-        };
-
-        form.addEventListener("submit", (e) => {
-          e.preventDefault();
-
-          if (habitsData.length >= MAX_HABITS) {
-            showToast(`Maximum of ${MAX_HABITS} habits reached.`, true);
-            return;
-          }
-
-          // Get values
-          const name = document.getElementById("habitName").value;
-          const time = document.getElementById("habitTime").value;
-          const melody = document.getElementById("habitMelody").value;
-
-          // Create new JSON object
-          const newHabit = {
-            id: Date.now(), // Generate unique ID
-            name: name,
-            time: time,
-            melody: melody,
-          };
-
-          // Add to JSON array
-          habitsData.push(newHabit);
-
-          // Note: In real setup, send POST request to ESP32 here
-          // fetch('/api/habits', { method: 'POST', body: JSON.stringify(newHabit) });
-
-          // Update UI (animate the last added item)
-          renderHabits(true);
-
-          // Reset Form
-          form.reset();
-          document.getElementById("habitTime").value = "08:00";
-          showToast("Habit synced to device!");
-        });
-
-        // Initial render
-        renderHabits();
-      });
-    </script>
+    <script src="./script.js"></script>
   </body>
 </html>
