@@ -308,13 +308,15 @@ void setupWebServer()
 
   server.on("/script.js", HTTP_GET, []()
             {
-File file = LittleFS.open("/script.js", "r");
+    File file = LittleFS.open("/script.js", "r");
     server.streamFile(file, "application/javascript");
     file.close(); });
 
-  server.on("/habits", HTTP_GET, []()
-            { server.send(200, "application/json", prefs.getString("data"
-                                                                   "[]")); });
+  // Fehlende Registrierungen ergänzt:
+  server.on("/habits", HTTP_GET, handleGetHabits);
+  server.on("/habits", HTTP_POST, handlePostHabit);
+  server.on("/habits", HTTP_DELETE, handleDeleteHabit);
+  server.on("/sync-time", HTTP_POST, handleSyncTime);
 }
 
 // =====================================================================
