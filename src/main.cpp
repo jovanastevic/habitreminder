@@ -5,10 +5,11 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <ArduinoJson.h>
-#include <sys/time.h> // Uhr über settimeofday()/gettimeofday() stellen/lesen
-#include <Preferences.h>
-#include <LittleFS.h>
+#include <sys/time.h>    // Uhr über settimeofday()/gettimeofday() stellen/lesen
+#include <Preferences.h> // datenspeicherung
+#include <LittleFS.h>    // files upload auf flash
 
+// in mehrere files aufgeteilt weil ich crashout hatte beim code lesen
 #include "config.h"
 #include "secrets.h"
 #include "melodies.h"
@@ -18,7 +19,7 @@
 // =====================================================================
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 WebServer server(80);
-Preferences prefs; // for smth
+Preferences prefs; // für daten im flash speicher, damit er beim abstecken die habits nicht vergisst
 
 // =====================================================================
 // State-Machine- und Habit-Daten
@@ -30,8 +31,8 @@ int habitCount = 0;
 int currentHabitIndex = 0;
 long lastKnownDay = 0; // TODO:
 
-int countdownHabitIndex = -1;
-int countdownMinutes = 0;
+int countdownHabitIndex = -1; // TODO
+int countdownMinutes = 0;     // TODO
 
 // Rotary Encoder / Taster
 int lastCLK = HIGH;
@@ -48,6 +49,30 @@ void setColor(int r, int g, int b)
   analogWrite(PIN_R, r);
   analogWrite(PIN_G, g);
   analogWrite(PIN_B, b);
+}
+
+void playHabitMelody(String melody)
+{
+  if (melody == "Smooth")
+  {
+    playSmoothMelody();
+  }
+  else if (melody == "Playful")
+  {
+    playPlayfulMelody();
+  }
+  else if (melody == "Urgent")
+  {
+    playUrgentMelody();
+  }
+  else if (melody == "Mysterious")
+  {
+    playMysteriousMelody();
+  }
+  else if (melody == "Fanfare")
+  {
+    playFanfareMelody();
+  }
 }
 
 // =====================================================================
@@ -434,7 +459,7 @@ void loop()
         currentHabitIndex = i;
         habits[i].reminderTriggered = true;
         saveHabits();
-        playReminderMelody(PIN_BUZZER); // kurzer Piep
+        playHabitMelody(habits[i].melody); // individuelle melodie wird abgespielt
         break;
       }
       else if (diff > 0 && diff <= 15)
@@ -493,8 +518,7 @@ void loop()
         currentState = STATE_FEEDBACK;
         feedbackStartTime = now;
 
-        if (h.melody == "Success")
-          playSuccessMelody(PIN_BUZZER);
+        playSuccessMelody();
       }
     }
     lastActivityTime = now;

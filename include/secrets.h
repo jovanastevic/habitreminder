@@ -2,7 +2,7 @@
 #define SECRETS_H
 
 // network settings
-const char *ssid = "habit-tracker";
+const char *ssid = "habit-companion";
 const char *password = "sehrwildespasswort123";
 
 #endif

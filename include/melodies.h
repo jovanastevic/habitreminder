@@ -2,6 +2,7 @@
 #define MELODIES_H
 
 #include <Arduino.h>
+#include "config.h" //import für PIN_BUZZER
 
 // --- Noten-Frequenzen ---
 #define NOTE_C4 262
@@ -23,8 +24,7 @@
 
 // --- Melodie-Funktionen ---
 // Das Schlüsselwort "inline" verhindert Compiler-Fehler bei mehrfacher Einbindung
-
-inline void playSuccessMelody(uint8_t buzzerPin)
+inline void playSuccessMelody()
 {
   int melodies[] = {NOTE_C5, NOTE_E5, NOTE_G5, NOTE_C6};
   int duration[] = {8, 8, 8, 2};
@@ -32,14 +32,14 @@ inline void playSuccessMelody(uint8_t buzzerPin)
   for (int i = 0; i < 4; i++)
   {
     int noteDuration = 1000 / duration[i];
-    tone(buzzerPin, melodies[i], noteDuration);
+    tone(PIN_BUZZER, melodies[i], noteDuration);
     int pause = noteDuration * 1.30;
-    delay(pause); // TODO: Später auf millis() umbauen für die Note 1
-    noTone(buzzerPin);
+    delay(pause); // passiert nix kritisches während ton abspielen, blockieren deshalb fine + timing für melodie ist exakter
+    noTone(PIN_BUZZER);
   }
 }
 
-inline void playErrorMelody(uint8_t buzzerPin)
+inline void playErrorMelody()
 {
   int melodies[] = {NOTE_G5, NOTE_C5};
   int duration[] = {4, 2};
@@ -47,26 +47,24 @@ inline void playErrorMelody(uint8_t buzzerPin)
   for (int i = 0; i < 2; i++)
   {
     int noteDuration = 1000 / duration[i];
-    tone(buzzerPin, melodies[i], noteDuration);
+    tone(PIN_BUZZER, melodies[i], noteDuration);
     int pause = noteDuration * 1.30;
     delay(pause);
-    noTone(buzzerPin);
+    noTone(PIN_BUZZER);
   }
 }
 
-inline void playReminderMelody(uint8_t buzzerPin)
+inline void playReminderMelody()
 {
   // Kurzes, doppeltes Piepen (nervt nicht zu sehr)
-  tone(buzzerPin, NOTE_C6, 100);
+  tone(PIN_BUZZER, NOTE_C6, 100);
   delay(150);
-  tone(buzzerPin, NOTE_C6, 100);
+  tone(PIN_BUZZER, NOTE_C6, 100);
   delay(150);
-  noTone(buzzerPin);
+  noTone(PIN_BUZZER);
 }
 
-// Ruhiger, schwebender Glockenton - gut fürs Aufwachen/sanfte Reminder
-// ~3.9s, Start (C5) und Ende (E5) liegen nah beieinander -> loopt sanft
-inline void playSmoothMelody(uint8_t buzzerPin)
+inline void playSmoothMelody()
 {
   int melodies[] = {NOTE_C5, NOTE_E5, NOTE_G5, NOTE_C6, NOTE_G5, NOTE_E5,
                     NOTE_C5, NOTE_E5, NOTE_G5, NOTE_C6, NOTE_G5, NOTE_E5};
@@ -75,16 +73,14 @@ inline void playSmoothMelody(uint8_t buzzerPin)
   for (int i = 0; i < 12; i++)
   {
     int noteDuration = 1000 / duration[i];
-    tone(buzzerPin, melodies[i], noteDuration);
+    tone(PIN_BUZZER, melodies[i], noteDuration);
     int pause = noteDuration * 1.30;
     delay(pause);
-    noTone(buzzerPin);
+    noTone(PIN_BUZZER);
   }
 }
 
-// Verspielte, hüpfende Melodie mit Dur-Dreiklängen - für positive Events
-// ~3.25s, endet auf C5, gleicher Ton wie Start -> loopt nahtlos
-inline void playPlayfulMelody(uint8_t buzzerPin)
+inline void playPlayfulMelody()
 {
   int melodies[] = {NOTE_C5, NOTE_E5, NOTE_D5, NOTE_F5,
                     NOTE_E5, NOTE_G5, NOTE_F5, NOTE_A5,
@@ -94,16 +90,14 @@ inline void playPlayfulMelody(uint8_t buzzerPin)
   for (int i = 0; i < 10; i++)
   {
     int noteDuration = 1000 / duration[i];
-    tone(buzzerPin, melodies[i], noteDuration);
+    tone(PIN_BUZZER, melodies[i], noteDuration);
     int pause = noteDuration * 1.30;
     delay(pause);
-    noTone(buzzerPin);
+    noTone(PIN_BUZZER);
   }
 }
 
-// Schnelles, dringliches Hin-und-Her - für "jetzt aber wirklich"-Reminder
-// ~3.25s, alterniert zwischen zwei Tönen -> loopt problemlos
-inline void playUrgentMelody(uint8_t buzzerPin)
+inline void playUrgentMelody()
 {
   int melodies[] = {NOTE_C6, NOTE_G5, NOTE_C6, NOTE_G5,
                     NOTE_C6, NOTE_G5, NOTE_C6, NOTE_G5,
@@ -116,16 +110,14 @@ inline void playUrgentMelody(uint8_t buzzerPin)
   for (int i = 0; i < 20; i++)
   {
     int noteDuration = 1000 / duration[i];
-    tone(buzzerPin, melodies[i], noteDuration);
+    tone(PIN_BUZZER, melodies[i], noteDuration);
     int pause = noteDuration * 1.30;
     delay(pause);
-    noTone(buzzerPin);
+    noTone(PIN_BUZZER);
   }
 }
 
-// Düster-mysteriöse, absteigende Melodie in Moll-Anmutung
-// ~3.9s, Start (C6) und Ende (C4) sind Oktaven voneinander -> loopt harmonisch
-inline void playMysteriousMelody(uint8_t buzzerPin)
+inline void playMysteriousMelody()
 {
   int melodies[] = {NOTE_C6, NOTE_A5, NOTE_F5, NOTE_D5,
                     NOTE_C5, NOTE_A4, NOTE_F4, NOTE_D4,
@@ -135,16 +127,14 @@ inline void playMysteriousMelody(uint8_t buzzerPin)
   for (int i = 0; i < 12; i++)
   {
     int noteDuration = 1000 / duration[i];
-    tone(buzzerPin, melodies[i], noteDuration);
+    tone(PIN_BUZZER, melodies[i], noteDuration);
     int pause = noteDuration * 1.30;
     delay(pause);
-    noTone(buzzerPin);
+    noTone(PIN_BUZZER);
   }
 }
 
-// Kleine Fanfare - für "Streak erreicht" oder Meilensteine
-// ~4.55s, endet mit langem Schlusston, Start & Ende beide C5/C6-Familie -> loopt gut
-inline void playFanfareMelody(uint8_t buzzerPin)
+inline void playFanfareMelody()
 {
   int melodies[] = {NOTE_C5, NOTE_C5, NOTE_C5, NOTE_G5,
                     NOTE_E5, NOTE_G5, NOTE_C6};
@@ -153,10 +143,10 @@ inline void playFanfareMelody(uint8_t buzzerPin)
   for (int i = 0; i < 7; i++)
   {
     int noteDuration = 1000 / duration[i];
-    tone(buzzerPin, melodies[i], noteDuration);
+    tone(PIN_BUZZER, melodies[i], noteDuration);
     int pause = noteDuration * 1.30;
     delay(pause);
-    noTone(buzzerPin);
+    noTone(PIN_BUZZER);
   }
 }
 
