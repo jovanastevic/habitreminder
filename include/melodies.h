@@ -150,4 +150,31 @@ inline void playFanfareMelody()
   }
 }
 
+// =====================================================================
+// Melody Main Function
+// =====================================================================
+inline void playHabitMelody(String melody)
+{
+  if (melody == "Smooth")
+  {
+    playSmoothMelody();
+  }
+  else if (melody == "Playful")
+  {
+    playPlayfulMelody();
+  }
+  else if (melody == "Urgent")
+  {
+    playUrgentMelody();
+  }
+  else if (melody == "Mysterious")
+  {
+    playMysteriousMelody();
+  }
+  else if (melody == "Fanfare")
+  {
+    playFanfareMelody();
+  }
+}
+
 #endif // MELODIES_H

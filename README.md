@@ -43,7 +43,7 @@ Eine blaues Leuchten der LED signalisiert, dass eine Habit aktuell fällig ist. 
 
 # TODOS
 
-- [ ] Knob für Rotary Encoder drucken
-- [ ] 3D Modell - Einkerbung für Rotary Encoder und LED und Display lassen
-- [ ] Modell drucken
+- [x] Knob für Rotary Encoder drucken
+- [x] 3D Modell - Einkerbung für Rotary Encoder und LED und Display lassen
+- [x] Modell drucken
 - [ ] Showreel eintragen mit Video

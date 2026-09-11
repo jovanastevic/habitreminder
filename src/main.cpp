@@ -24,7 +24,7 @@ Preferences prefs; // für daten im flash speicher, damit er beim abstecken die 
 // =====================================================================
 // State-Machine- und Habit-Daten
 // =====================================================================
-DeviceState currentState = STATE_INIT;
+DeviceState currentState = STATE_INIT; // auf init für first time
 
 Habit habits[MAX_HABITS];
 int habitCount = 0;
@@ -51,29 +51,29 @@ void setColor(int r, int g, int b)
   analogWrite(PIN_B, b);
 }
 
-void playHabitMelody(String melody)
-{
-  if (melody == "Smooth")
-  {
-    playSmoothMelody();
-  }
-  else if (melody == "Playful")
-  {
-    playPlayfulMelody();
-  }
-  else if (melody == "Urgent")
-  {
-    playUrgentMelody();
-  }
-  else if (melody == "Mysterious")
-  {
-    playMysteriousMelody();
-  }
-  else if (melody == "Fanfare")
-  {
-    playFanfareMelody();
-  }
-}
+// void playHabitMelody(String melody)
+// {
+//   if (melody == "Smooth")
+//   {
+//     playSmoothMelody();
+//   }
+//   else if (melody == "Playful")
+//   {
+//     playPlayfulMelody();
+//   }
+//   else if (melody == "Urgent")
+//   {
+//     playUrgentMelody();
+//   }
+//   else if (melody == "Mysterious")
+//   {
+//     playMysteriousMelody();
+//   }
+//   else if (melody == "Fanfare")
+//   {
+//     playFanfareMelody();
+//   }
+// }
 
 // =====================================================================
 // Zeit
@@ -240,14 +240,17 @@ void drawScreen()
 
   if (currentState == STATE_IDLE)
   {
-    // Smiley
-    display.drawCircle(64, 32, 20, SSD1306_WHITE);   // Gesicht
-    display.fillCircle(56, 26, 2, SSD1306_WHITE);    // Auge links
-    display.fillCircle(72, 26, 2, SSD1306_WHITE);    // Auge rechts
-    display.drawPixel(64, 32, SSD1306_WHITE);        // Nase
-    display.drawLine(54, 40, 74, 40, SSD1306_WHITE); // Lächeln
-    display.drawLine(54, 40, 50, 36, SSD1306_WHITE);
-    display.drawLine(74, 40, 78, 36, SSD1306_WHITE);
+    int yOffset = (int)(sin(millis() / 400.0) * 3);
+
+    display.setTextSize(2); // Große Schrift (12 Pixel breit pro Buchstabe)
+
+    // "HABIT" hat 5 Buchstaben -> 60px breit. (128 - 60) / 2 = X: 34
+    display.setCursor(34, 15 + yOffset);
+    display.println("HABIT");
+
+    // "COMPANION" hat 9 Buchstaben -> 108px breit. (128 - 108) / 2 = X: 10
+    display.setCursor(10, 35 + yOffset);
+    display.println("COMPANION");
   }
   else if (currentState == STATE_MENU)
   {

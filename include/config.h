@@ -23,12 +23,12 @@ const int OLED_RESET = -1;
 // --- State Machine ---
 enum DeviceState
 {
-  STATE_INIT,
-  STATE_IDLE,
-  STATE_MENU,
-  STATE_COUNTDOWN,
-  STATE_REMINDER,
-  STATE_FEEDBACK
+  STATE_INIT, // first time connecting phone
+  STATE_IDLE, // habit companion anzeige
+  STATE_MENU, // habit 1/2
+  STATE_COUNTDOWN, // in X min
+  STATE_REMINDER, // zeit fuer
+  STATE_FEEDBACK // streak
 };
 
 struct Habit
