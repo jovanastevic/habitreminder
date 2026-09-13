@@ -13,6 +13,8 @@
 #include "config.h"
 #include "secrets.h"
 #include "melodies.h"
+#include "globals.h"
+#include "display_manager.h"
 
 // =====================================================================
 // Globale Objekte
@@ -24,12 +26,13 @@ Preferences prefs; // für daten im flash speicher, damit er beim abstecken die 
 // =====================================================================
 // State-Machine- und Habit-Daten
 // =====================================================================
-DeviceState currentState = STATE_INIT; // auf init für first time
+// DeviceState currentState = STATE_INIT; // auf init für first time
+DeviceState currentState;
 
 Habit habits[MAX_HABITS];
 int habitCount = 0;
 int currentHabitIndex = 0;
-long lastKnownDay = 0; // TODO:
+long lastKnownDay = 0;
 
 int countdownHabitIndex = -1; // TODO
 int countdownMinutes = 0;     // TODO
@@ -50,30 +53,6 @@ void setColor(int r, int g, int b)
   analogWrite(PIN_G, g);
   analogWrite(PIN_B, b);
 }
-
-// void playHabitMelody(String melody)
-// {
-//   if (melody == "Smooth")
-//   {
-//     playSmoothMelody();
-//   }
-//   else if (melody == "Playful")
-//   {
-//     playPlayfulMelody();
-//   }
-//   else if (melody == "Urgent")
-//   {
-//     playUrgentMelody();
-//   }
-//   else if (melody == "Mysterious")
-//   {
-//     playMysteriousMelody();
-//   }
-//   else if (melody == "Fanfare")
-//   {
-//     playFanfareMelody();
-//   }
-// }
 
 // =====================================================================
 // Zeit
@@ -98,7 +77,7 @@ void parseTime(Habit &h)
 }
 
 // =====================================================================
-// Persistenz (Flash über Preferences, als JSON-String)
+// Persistenz (Flash über Preferences, als JSON-String) & Input Handler (Rotary Encoder)
 // =====================================================================
 void saveHabits()
 {
@@ -146,269 +125,8 @@ void loadHabits()
   }
 }
 
-// =====================================================================
-// Webserver-Handler
-// =====================================================================
-void handleGetHabits()
+void checkMidnightReset(long currentDay)
 {
-  // schlanker als saveHabits(): die Webseite braucht z.B. reminderTriggered
-  // nicht, das ist reine Geräte-interne Buchhaltung.
-  JsonDocument doc;
-  JsonArray array = doc.to<JsonArray>();
-  for (int i = 0; i < habitCount; i++)
-  {
-    JsonObject obj = array.add<JsonObject>();
-    obj["id"] = habits[i].id;
-    obj["name"] = habits[i].name;
-    obj["time"] = habits[i].time;
-    obj["melody"] = habits[i].melody;
-    obj["completedToday"] = habits[i].completedToday;
-    obj["currentStreak"] = habits[i].currentStreak;
-  }
-  String jsonResponse;
-  serializeJson(doc, jsonResponse);
-  server.send(200, "application/json", jsonResponse);
-}
-
-void handlePostHabit()
-{
-  if (habitCount >= MAX_HABITS)
-  {
-    server.send(400, "text/plain", "Max Habits reached");
-    return;
-  }
-
-  JsonDocument doc;
-  deserializeJson(doc, server.arg("plain"));
-
-  Habit &h = habits[habitCount];
-  h.id = doc["id"];
-  h.name = doc["name"].as<String>();
-  h.time = doc["time"].as<String>();
-  h.melody = doc["melody"].as<String>();
-  h.completedToday = false;
-  h.currentStreak = 0;
-  h.lastCompletedDay = 0;
-  h.reminderTriggered = false;
-  parseTime(h);
-
-  habitCount++;
-  saveHabits();
-  server.send(200, "application/json", "{\"status\":\"ok\"}");
-}
-
-void handleDeleteHabit()
-{
-  long id = server.arg("id").toInt();
-  for (int i = 0; i < habitCount; i++)
-  {
-    if (habits[i].id == id)
-    {
-      for (int j = i; j < habitCount - 1; j++)
-        habits[j] = habits[j + 1];
-      habitCount--;
-      saveHabits();
-      break;
-    }
-  }
-  server.send(200, "application/json", "{\"status\":\"ok\"}");
-}
-
-// Der Trick: Das Handy sendet uns die Uhrzeit, wenn die Webseite lädt
-// (der Access Point hat kein Internet -> kein NTP möglich)
-void handleSyncTime()
-{
-  JsonDocument doc;
-  deserializeJson(doc, server.arg("plain"));
-
-  struct timeval tv;
-  tv.tv_sec = doc["timestamp"];
-  tv.tv_usec = 0;
-  settimeofday(&tv, NULL);
-
-  server.send(200, "text/plain", "Time Synced");
-}
-
-// =====================================================================
-// Display
-// =====================================================================
-void drawScreen()
-{
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-
-  if (currentState == STATE_IDLE)
-  {
-    int yOffset = (int)(sin(millis() / 400.0) * 3);
-
-    display.setTextSize(2); // Große Schrift (12 Pixel breit pro Buchstabe)
-
-    // "HABIT" hat 5 Buchstaben -> 60px breit. (128 - 60) / 2 = X: 34
-    display.setCursor(34, 15 + yOffset);
-    display.println("HABIT");
-
-    // "COMPANION" hat 9 Buchstaben -> 108px breit. (128 - 108) / 2 = X: 10
-    display.setCursor(10, 35 + yOffset);
-    display.println("COMPANION");
-  }
-  else if (currentState == STATE_MENU)
-  {
-    if (habitCount == 0)
-    {
-      display.setCursor(0, 20);
-      display.println("Keine Habits!");
-      display.setCursor(0, 40);
-      display.println("Handy verbinden.");
-    }
-    else
-    {
-      Habit &h = habits[currentHabitIndex];
-      display.setCursor(0, 0);
-      display.print("Habit ");
-      display.print(currentHabitIndex + 1);
-      display.print("/");
-      display.println(habitCount);
-      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
-
-      display.setTextSize(2);
-      display.setCursor(0, 20);
-      display.println(h.name);
-
-      display.setTextSize(1);
-      display.setCursor(0, 45);
-      display.println(h.completedToday ? "[X] Schon erledigt" : "[ ] Druecke Button!");
-    }
-  }
-  else if (currentState == STATE_COUNTDOWN)
-  {
-    display.setCursor(0, 10);
-    display.println("Bald ist es soweit!");
-    display.setTextSize(2);
-    display.setCursor(0, 25);
-    display.println(habits[countdownHabitIndex].name);
-    display.setTextSize(1);
-    display.setCursor(0, 50);
-    display.print("In ");
-    display.print(countdownMinutes);
-    display.println(" Min");
-  }
-  else if (currentState == STATE_REMINDER)
-  {
-    display.setTextSize(2);
-    display.setCursor(0, 10);
-    display.println("ZEIT FUER:");
-    display.setCursor(0, 35);
-    display.println(habits[currentHabitIndex].name);
-  }
-  else if (currentState == STATE_FEEDBACK)
-  {
-    display.setTextSize(2);
-    display.setCursor(20, 15);
-    display.println("STARK!");
-    display.setTextSize(1);
-    display.setCursor(20, 40);
-    display.print("Streak: ");
-    display.print(habits[currentHabitIndex].currentStreak);
-    display.println(" Tage");
-  }
-
-  display.display();
-}
-
-void setupWebServer()
-{
-  server.on("/", HTTP_GET, []()
-            {
-    File file = LittleFS.open("/index.html", "r");
-    if(!file){
-      server.send(500, "text/plain", "Fehler: index.html nicht gefunden");
-      return;
-    }
-    server.streamFile(file, "text/html");
-    file.close(); });
-
-  server.on("/style.css", HTTP_GET, []()
-            {
-    File file = LittleFS.open("/style.css", "r");
-    server.streamFile(file, "text/css");
-    file.close(); });
-
-  server.on("/script.js", HTTP_GET, []()
-            {
-    File file = LittleFS.open("/script.js", "r");
-    server.streamFile(file, "application/javascript");
-    file.close(); });
-
-  // Fehlende Registrierungen ergänzt:
-  server.on("/habits", HTTP_GET, handleGetHabits);
-  server.on("/habits", HTTP_POST, handlePostHabit);
-  server.on("/habits", HTTP_DELETE, handleDeleteHabit);
-  server.on("/sync-time", HTTP_POST, handleSyncTime);
-}
-
-// =====================================================================
-// Setup
-// =====================================================================
-void setup()
-{
-  Serial.begin(115200);
-  Serial.println("\n Habit Reminder startet...");
-
-  if (!LittleFS.begin(true))
-  {
-    Serial.println("Fehler beim Mounten von LittleFS");
-    return;
-  }
-
-  Serial.println("LittleFS erfolgreich gestartet!");
-
-  pinMode(PIN_ENC_CLK, INPUT_PULLUP);
-  pinMode(PIN_ENC_DT, INPUT_PULLUP);
-  pinMode(PIN_ENC_SW, INPUT_PULLUP);
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
-  pinMode(PIN_R, OUTPUT);
-  pinMode(PIN_G, OUTPUT);
-  pinMode(PIN_B, OUTPUT);
-  setColor(0, 0, 0);
-
-  // Wire.begin() OHNE Pins würde die ESP32-Standardpins (21/22) statt
-  // I2C_SDA/I2C_SCL (32/33) verwenden -> deshalb hier explizit angeben
-  Wire.begin(I2C_SDA, I2C_SCL);
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-  {
-    Serial.println("OLED Fehler!");
-  }
-
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(10, 20);
-  display.println("Starte Reminder...");
-  display.display();
-
-  prefs.begin("habitApp", false); // Flash-Speicher öffnen
-  WiFi.softAP(ssid, password);
-  Serial.print("Access Point gestartet. IP: ");
-  Serial.println(WiFi.softAPIP()); // normalerweise 192.168.4.1
-
-  setupWebServer();
-  server.begin();
-  Serial.println("Webserver läuft");
-
-  loadHabits();
-  currentState = STATE_IDLE;
-}
-
-// =====================================================================
-// Loop
-// =====================================================================
-void loop()
-{
-  server.handleClient();
-  unsigned long now = millis();
-  long currentDay = getCurrentDay();
-
   // 1. Mitternachts-Reset & Streak-Bruch-Check
   if (currentDay > lastKnownDay && currentDay > 0)
   {
@@ -422,7 +140,10 @@ void loop()
     saveHabits();
     lastKnownDay = currentDay;
   }
+}
 
+void checkTimeTriggers(long currentDay, unsigned long now)
+{
   // 2. Zeit prüfen (Countdown & Reminder) - während IDLE oder COUNTDOWN
   //    (läuft in COUNTDOWN weiter, sonst bleibt die Anzeige stehen und
   //    der Reminder wird nie ausgelöst)
@@ -478,8 +199,11 @@ void loop()
     if (currentState == STATE_COUNTDOWN && !stillCounting)
       currentState = STATE_IDLE;
   }
+}
 
-  // 3. Rotary Encoder lesen
+void handleInputs(long currentDay, unsigned long now)
+{
+  // Rotary Encoder lesen
   int clkState = digitalRead(PIN_ENC_CLK);
   if (clkState != lastCLK && clkState == HIGH)
   {
@@ -500,7 +224,7 @@ void loop()
   }
   lastCLK = clkState;
 
-  // 4. Button lesen (Encoder-Taster)
+  // Button lesen (Encoder-Taster)
   bool btnState = digitalRead(PIN_ENC_SW);
   if (btnState == LOW && lastButtonState == HIGH && now - lastActivityTime > 200) // Entprellen
   {
@@ -518,26 +242,29 @@ void loop()
           h.lastCompletedDay = currentDay;
         }
         saveHabits();
-        currentState = STATE_FEEDBACK;
-        feedbackStartTime = now;
-
         playSuccessMelody();
+        // updateDisplay();
+        currentState = STATE_COMPLETED;
+        feedbackStartTime = now;
       }
     }
     lastActivityTime = now;
   }
   lastButtonState = btnState;
+}
 
+void handleStateAndLEDs(unsigned long now)
+{
   // 5. State-abhängige LED-Steuerung
   switch (currentState)
   {
   case STATE_MENU:
     setColor(0, 0, 0);
-    if (now - lastActivityTime > 10000) // 10s Inaktivität -> zurück zum Smiley
+    if (now - lastActivityTime > 15000) // 15s Inaktivität -> zurück zum Idle State
       currentState = STATE_IDLE;
     break;
 
-  case STATE_FEEDBACK:
+  case STATE_COMPLETED:
     setColor(0, 255, 0); // Knallgrün
     if (now - feedbackStartTime > 3000)
     {
@@ -558,7 +285,7 @@ void loop()
     }
     break;
 
-  case STATE_COUNTDOWN:
+  // case STATE_COUNTDOWN: // no led needed
   case STATE_IDLE:
     setColor(0, 0, 0);
     break;
@@ -566,12 +293,188 @@ void loop()
   default:
     break;
   }
+}
+
+// =====================================================================
+// Webserver-Handler
+// =====================================================================
+void handleGetHabits()
+{
+  // schlanker als saveHabits(): die Webseite braucht z.B. reminderTriggered
+  // nicht, das ist reine Geräte-interne Buchhaltung.
+  JsonDocument doc;
+  JsonArray array = doc.to<JsonArray>();
+  for (int i = 0; i < habitCount; i++)
+  {
+    JsonObject obj = array.add<JsonObject>();
+    obj["id"] = habits[i].id;
+    obj["name"] = habits[i].name;
+    obj["time"] = habits[i].time;
+    obj["melody"] = habits[i].melody;
+    obj["completedToday"] = habits[i].completedToday;
+    obj["currentStreak"] = habits[i].currentStreak;
+  }
+  String jsonResponse;
+  serializeJson(doc, jsonResponse);
+  server.send(200, "application/json", jsonResponse);
+}
+
+void handlePostHabit()
+{
+  if (habitCount >= MAX_HABITS)
+  {
+    server.send(400, "text/plain", "Max Habits erreicht");
+    return;
+  }
+
+  JsonDocument doc;
+  deserializeJson(doc, server.arg("plain"));
+
+  Habit &h = habits[habitCount];
+  h.id = doc["id"];
+  h.name = doc["name"].as<String>();
+  h.time = doc["time"].as<String>();
+  h.melody = doc["melody"].as<String>();
+  h.completedToday = false;
+  h.currentStreak = 0;
+  h.lastCompletedDay = 0;
+  h.reminderTriggered = false;
+  parseTime(h);
+
+  habitCount++;
+  saveHabits();
+  server.send(200, "application/json", "{\"status\":\"ok\"}");
+}
+
+void handleDeleteHabit()
+{
+  long id = server.arg("id").toInt();
+  for (int i = 0; i < habitCount; i++)
+  {
+    if (habits[i].id == id)
+    {
+      for (int j = i; j < habitCount - 1; j++)
+        habits[j] = habits[j + 1];
+      habitCount--;
+      saveHabits();
+      break;
+    }
+  }
+  server.send(200, "application/json", "{\"status\":\"ok\"}");
+}
+
+// Der Trick: Das Handy sendet uns die Uhrzeit, wenn die Webseite lädt
+// (der Access Point hat kein Internet -> kein NTP möglich)
+void handleSyncTime()
+{
+  JsonDocument doc;
+  deserializeJson(doc, server.arg("plain"));
+
+  struct timeval tv;
+  tv.tv_sec = doc["timestamp"];
+  tv.tv_usec = 0;
+  settimeofday(&tv, NULL);
+
+  server.send(200, "text/plain", "Time Synced");
+}
+
+void setupWebServer()
+{
+  server.on("/", HTTP_GET, []()
+            {
+    File file = LittleFS.open("/index.html", "r");
+    if(!file){
+      server.send(500, "text/plain", "Fehler: index.html nicht gefunden");
+      return;
+    }
+    server.streamFile(file, "text/html");
+    file.close(); });
+
+  server.on("/style.css", HTTP_GET, []()
+            {
+    File file = LittleFS.open("/style.css", "r");
+    server.streamFile(file, "text/css");
+    file.close(); });
+
+  server.on("/script.js", HTTP_GET, []()
+            {
+    File file = LittleFS.open("/script.js", "r");
+    server.streamFile(file, "application/javascript");
+    file.close(); });
+
+  // Fehlende Registrierungen ergänzt:
+  server.on("/habits", HTTP_GET, handleGetHabits);
+  server.on("/habits", HTTP_POST, handlePostHabit);
+  server.on("/habits", HTTP_DELETE, handleDeleteHabit);
+  server.on("/sync-time", HTTP_POST, handleSyncTime);
+}
+
+// =====================================================================
+// Setup
+// =====================================================================
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println("\n Habit Companion startet...");
+
+  if (!LittleFS.begin(true))
+  {
+    Serial.println("Fehler beim Mounten von LittleFS");
+    return;
+  }
+
+  Serial.println("LittleFS erfolgreich gestartet!");
+
+  pinMode(PIN_ENC_CLK, INPUT);
+  pinMode(PIN_ENC_DT, INPUT);
+  pinMode(PIN_ENC_SW, INPUT);
+  pinMode(PIN_R, OUTPUT);
+  pinMode(PIN_G, OUTPUT);
+  pinMode(PIN_B, OUTPUT);
+  setColor(0, 0, 0);
+
+  // Wire.begin() OHNE Pins würde die ESP32-Standardpins (21/22) statt
+  // I2C_SDA/I2C_SCL (32/33) verwenden -> deshalb hier explizit angeben
+  Wire.begin(I2C_SDA, I2C_SCL);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
+  {
+    Serial.println("OLED Fehler!");
+  }
+
+  prefs.begin("habitApp", false); // Flash-Speicher öffnen
+  WiFi.softAP(ssid, password);
+  Serial.println(WiFi.softAPIP()); // normalerweise 192.168.4.1
+
+  setupWebServer();
+  server.begin();
+  Serial.println("Webserver läuft");
+
+  loadHabits();
+  currentState = STATE_IDLE;
+}
+
+// =====================================================================
+// Loop
+// =====================================================================
+void loop()
+{
+  server.handleClient();
+  unsigned long now = millis();
+  long currentDay = getCurrentDay();
+
+  checkMidnightReset(currentDay);
+
+  checkTimeTriggers(currentDay, now);
+
+  handleInputs(currentDay, now);
+
+  handleStateAndLEDs(now);
 
   // Display max. alle 100ms neu zeichnen (verhindert Flimmern)
   static unsigned long lastDraw = 0;
   if (now - lastDraw > 100)
   {
-    drawScreen();
+    updateDisplay();
     lastDraw = now;
   }
 }

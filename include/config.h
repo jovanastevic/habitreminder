@@ -13,7 +13,6 @@ const int PIN_ENC_DT = 19;
 const int PIN_ENC_SW = 5;
 const int I2C_SDA = 32; // oled display
 const int I2C_SCL = 33;
-const int PIN_BUTTON = 4; // mal schauen ob ich das einbaue
 
 // --- OLED Konfiguration ---
 const int SCREEN_WIDTH = 128;
@@ -23,12 +22,11 @@ const int OLED_RESET = -1;
 // --- State Machine ---
 enum DeviceState
 {
-  STATE_INIT, // first time connecting phone
-  STATE_IDLE, // habit companion anzeige
-  STATE_MENU, // habit 1/2
+  STATE_IDLE,      // habit companion anzeige
+  STATE_MENU,      // habit 1/2
   STATE_COUNTDOWN, // in X min
-  STATE_REMINDER, // zeit fuer
-  STATE_FEEDBACK // streak
+  STATE_REMINDER,  // zeit fuer
+  STATE_COMPLETED  // streak
 };
 
 struct Habit
