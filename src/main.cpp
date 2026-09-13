@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Ticker.h>
 #include <ArduinoJson.h>
 #include <sys/time.h>    // Uhr über settimeofday()/gettimeofday() stellen/lesen
 #include <Preferences.h> // datenspeicherung
@@ -19,6 +20,7 @@
 // =====================================================================
 // Globale Objekte
 // =====================================================================
+Ticker encoderTicker;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 WebServer server(80);
 Preferences prefs; // für daten im flash speicher, damit er beim abstecken die habits nicht vergisst
@@ -34,15 +36,21 @@ int habitCount = 0;
 int currentHabitIndex = 0;
 long lastKnownDay = 0;
 
-int countdownHabitIndex = -1; // TODO
-int countdownMinutes = 0;     // TODO
+int countdownHabitIndex = -1;
+int countdownMinutes = 0;
+
+const unsigned long timeout_menu = 150000; // 15sek
+const unsigned long timeout_reminder = 10;
 
 // Rotary Encoder / Taster
-int lastCLK = HIGH;
+// int lastCLK = HIGH;
+volatile bool encoder_turned_right = false;
+volatile bool encoder_turned_left = false;
 bool lastButtonState = HIGH;
 unsigned long lastActivityTime = 0;
 unsigned long feedbackStartTime = 0;
 unsigned long lastBlinkTime = 0;
+unsigned long lastButtonPressTime = 0;
 int brightness = 0;
 int fadeAmount = 5;
 
@@ -127,18 +135,30 @@ void loadHabits()
 
 void checkMidnightReset(long currentDay)
 {
-  // 1. Mitternachts-Reset & Streak-Bruch-Check
-  if (currentDay > lastKnownDay && currentDay > 0)
+  // Mitternachts-Reset & Streak-Bruch-Check
+  if (currentDay > 0)
   {
-    for (int i = 0; i < habitCount; i++)
+    if (lastKnownDay == 0)
     {
-      habits[i].completedToday = false;
-      habits[i].reminderTriggered = false;
-      if (habits[i].lastCompletedDay < currentDay - 1 && habits[i].currentStreak > 0)
-        habits[i].currentStreak = 0; // Streak gerissen
+      // Erster Zeit-Sync nach Neustart: Nichts löschen, nur den Tag merken
+      lastKnownDay = currentDay;
     }
-    saveHabits();
-    lastKnownDay = currentDay;
+    else if (currentDay > lastKnownDay)
+    {
+      // Echter Tageswechsel um Mitternacht: Jetzt darf resettet werden
+      for (int i = 0; i < habitCount; i++)
+      {
+        habits[i].completedToday = false;
+        habits[i].reminderTriggered = false;
+
+        if (habits[i].lastCompletedDay < currentDay - 1 && habits[i].currentStreak > 0)
+        {
+          habits[i].currentStreak = 0;
+        }
+      }
+      saveHabits();
+      lastKnownDay = currentDay;
+    }
   }
 }
 
@@ -201,33 +221,68 @@ void checkTimeTriggers(long currentDay, unsigned long now)
   }
 }
 
+void readEncoder()
+{
+  static uint8_t old_AB = 3;
+  static int8_t encval = 0;
+  static const int8_t enc_states[] = {0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0};
+
+  old_AB <<= 2;
+  if (digitalRead(PIN_ENC_CLK))
+    old_AB |= 0x02;
+  if (digitalRead(PIN_ENC_DT))
+    old_AB |= 0x01;
+
+  encval += enc_states[(old_AB & 0x0f)];
+
+  if (encval > 3)
+  {
+    encoder_turned_right = true;
+    encval = 0;
+  }
+  else if (encval < -3)
+  {
+    encoder_turned_left = true;
+    encval = 0;
+  }
+}
+
 void handleInputs(long currentDay, unsigned long now)
 {
-  // Rotary Encoder lesen
-  int clkState = digitalRead(PIN_ENC_CLK);
-  if (clkState != lastCLK && clkState == HIGH)
+  // Rotary Encoder auswerten (per Ticker im Hintergrund gepollt)
+  if (encoder_turned_left)
   {
-    if (digitalRead(PIN_ENC_DT) != clkState)
-      currentHabitIndex++;
-    else
-      currentHabitIndex--;
+    encoder_turned_left = false;
+    currentHabitIndex++;
 
     if (currentHabitIndex >= habitCount)
       currentHabitIndex = 0;
-    if (currentHabitIndex < 0)
-      currentHabitIndex = max(0, habitCount - 1);
 
-    if (currentState == STATE_IDLE || currentState == STATE_COUNTDOWN)
+    if (currentState == STATE_IDLE || currentState == STATE_COUNTDOWN || currentState == STATE_REMINDER)
       currentState = STATE_MENU;
 
     lastActivityTime = now;
   }
-  lastCLK = clkState;
+
+  if (encoder_turned_right)
+  {
+    encoder_turned_right = false;
+    currentHabitIndex--;
+
+    if (currentHabitIndex < 0)
+      currentHabitIndex = max(0, habitCount - 1);
+
+    if (currentState == STATE_IDLE || currentState == STATE_COUNTDOWN || currentState == STATE_REMINDER)
+      currentState = STATE_MENU;
+
+    lastActivityTime = now;
+  }
 
   // Button lesen (Encoder-Taster)
   bool btnState = digitalRead(PIN_ENC_SW);
-  if (btnState == LOW && lastButtonState == HIGH && now - lastActivityTime > 200) // Entprellen
+  if (btnState == LOW && lastButtonState == HIGH && now - lastButtonPressTime > 200) // Entprellen
   {
+    lastButtonPressTime = now;
     if ((currentState == STATE_MENU || currentState == STATE_REMINDER) && habitCount > 0)
     {
       Habit &h = habits[currentHabitIndex];
@@ -255,7 +310,7 @@ void handleInputs(long currentDay, unsigned long now)
 
 void handleStateAndLEDs(unsigned long now)
 {
-  // 5. State-abhängige LED-Steuerung
+  // State-abhängige LED-Steuerung
   switch (currentState)
   {
   case STATE_MENU:
@@ -285,7 +340,6 @@ void handleStateAndLEDs(unsigned long now)
     }
     break;
 
-  // case STATE_COUNTDOWN: // no led needed
   case STATE_IDLE:
     setColor(0, 0, 0);
     break;
@@ -425,13 +479,14 @@ void setup()
 
   Serial.println("LittleFS erfolgreich gestartet!");
 
-  pinMode(PIN_ENC_CLK, INPUT);
-  pinMode(PIN_ENC_DT, INPUT);
-  pinMode(PIN_ENC_SW, INPUT);
+  pinMode(PIN_ENC_CLK, INPUT_PULLUP); // irgendwie spinnts rum wenns nur input ist, habit erledigt sich ohne button press
+  pinMode(PIN_ENC_DT, INPUT_PULLUP);
+  pinMode(PIN_ENC_SW, INPUT_PULLUP);
   pinMode(PIN_R, OUTPUT);
   pinMode(PIN_G, OUTPUT);
   pinMode(PIN_B, OUTPUT);
   setColor(0, 0, 0);
+  encoderTicker.attach_ms(4, readEncoder);
 
   // Wire.begin() OHNE Pins würde die ESP32-Standardpins (21/22) statt
   // I2C_SDA/I2C_SCL (32/33) verwenden -> deshalb hier explizit angeben
